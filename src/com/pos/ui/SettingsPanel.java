@@ -19,8 +19,13 @@ public class SettingsPanel extends JPanel {
     private JTextField storeNameField;
     private JTextArea storeAddressArea;
 
+
     // Tax settings
     private JTextField taxRateField;
+
+    // UI scaling settings
+    private JSlider uiScaleSlider;
+    private JLabel uiScaleLabel;
 
     // Action buttons
     private JButton saveButton;
@@ -46,8 +51,23 @@ public class SettingsPanel extends JPanel {
         storeAddressArea.setLineWrap(true);
         storeAddressArea.setWrapStyleWord(true);
 
+
         // Tax settings
         taxRateField = new JTextField(10);
+
+
+
+        // UI scaling settings
+
+        uiScaleSlider = new JSlider(JSlider.HORIZONTAL, 80, 200, 100);
+        uiScaleSlider.setMajorTickSpacing(20);
+        uiScaleSlider.setMinorTickSpacing(10);
+        uiScaleSlider.setPaintTicks(true);
+        uiScaleSlider.setPaintLabels(true);
+        uiScaleSlider.setToolTipText("Adjust UI scaling from 80% to 200%");
+        
+        uiScaleLabel = new JLabel("100%");
+        uiScaleLabel.setFont(new Font(uiScaleLabel.getFont().getName(), Font.BOLD, 14));
 
 
 
@@ -120,10 +140,25 @@ public class SettingsPanel extends JPanel {
         gbc.gridy = 5; gbc.gridwidth = 1;
         settingsPanel.add(new JSeparator(), gbc);
 
+
         gbc.gridy = 6;
         settingsPanel.add(new JLabel("Tax Rate (%):"), gbc);
         gbc.gridx = 1;
         settingsPanel.add(taxRateField, gbc);
+
+        // UI Scaling section
+        gbc.gridx = 0; gbc.gridy = 7; gbc.gridwidth = 2;
+        settingsPanel.add(new JLabel("UI Scaling"), gbc);
+        gbc.gridy = 8; gbc.gridwidth = 1;
+        settingsPanel.add(new JSeparator(), gbc);
+
+        gbc.gridy = 9;
+        settingsPanel.add(new JLabel("Scale:"), gbc);
+        gbc.gridx = 1;
+        JPanel scalePanel = new JPanel(new BorderLayout());
+        scalePanel.add(uiScaleSlider, BorderLayout.CENTER);
+        scalePanel.add(uiScaleLabel, BorderLayout.EAST);
+        settingsPanel.add(scalePanel, gbc);
 
         // Button panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -147,16 +182,43 @@ public class SettingsPanel extends JPanel {
         add(southPanel, BorderLayout.SOUTH);
     }
 
+
     private void setupEventHandlers() {
         saveButton.addActionListener(e -> saveSettings());
         resetSettingsButton.addActionListener(e -> resetSettings());
+        
+
+
+        // UI scaling slider change listener for real-time preview
+        uiScaleSlider.addChangeListener(e -> {
+            int scaleValue = uiScaleSlider.getValue();
+            uiScaleLabel.setText(scaleValue + "%");
+            
+            // Only apply scaling when user stops dragging (more stable)
+            if (!uiScaleSlider.getValueIsAdjusting()) {
+                applyScalingPreview(scaleValue / 100.0);
+            }
+        });
     }
+
+
 
 
     private void loadSettings() {
         storeNameField.setText((String) dataManager.getSetting("storeName"));
         storeAddressArea.setText((String) dataManager.getSetting("storeAddress"));
         taxRateField.setText(String.valueOf((Double) dataManager.getSetting("taxRate") * 100));
+        
+        // Load UI scale setting
+        double uiScale = (Double) dataManager.getSetting("uiScale");
+        int scalePercentage = (int) (uiScale * 100);
+        uiScaleSlider.setValue(scalePercentage);
+        uiScaleLabel.setText(scalePercentage + "%");
+    }
+    
+    private void applyScalingPreview(double scaleFactor) {
+        // Apply scaling preview to main window
+        mainPOS.applyPreviewUIScaling(scaleFactor);
     }
 
 
@@ -185,12 +247,17 @@ public class SettingsPanel extends JPanel {
                 return;
             }
 
+
             // Save settings
             dataManager.setSetting("storeName", storeNameField.getText().trim());
             dataManager.setSetting("storeAddress", storeAddressArea.getText().trim());
             dataManager.setSetting("taxRate", taxRate / 100.0); // Convert percentage to decimal
+            dataManager.setSetting("uiScale", uiScaleSlider.getValue() / 100.0); // Convert percentage to decimal
 
             dataManager.saveData();
+
+            // Apply UI scaling immediately
+            mainPOS.applyUIScaling();
 
 
 
@@ -211,16 +278,21 @@ public class SettingsPanel extends JPanel {
             "Confirm Reset", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
 
+
         if (result == JOptionPane.YES_OPTION) {
             // Reset to defaults
             dataManager.setSetting("storeName", "GPOS-General");
             dataManager.setSetting("storeAddress", "123 Main Street");
             dataManager.setSetting("taxRate", 0.08);
+            dataManager.setSetting("uiScale", 1.0);
 
             dataManager.saveData();
 
             // Reload settings in UI
             loadSettings();
+
+            // Apply UI scaling immediately
+            mainPOS.applyUIScaling();
 
             statusLabel.setText("Settings reset to defaults");
             JOptionPane.showMessageDialog(this, "Settings reset to default values.",

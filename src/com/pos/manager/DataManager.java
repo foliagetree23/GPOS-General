@@ -483,11 +483,14 @@ public class DataManager {
 
         } catch (FileNotFoundException e) {
 
+
+
             // Initialize default settings
             settings.put("taxRate", 0.08);
             settings.put("currency", "IDR");
             settings.put("storeName", "GPOS-General");
             settings.put("storeAddress", "123 Main Street");
+            settings.put("uiScale", 1.0); // 100% - middle of 80%-120% range
             saveSettings();
         } catch (IOException | ClassNotFoundException e) {
             System.err.println("Error loading settings: " + e.getMessage());
@@ -651,6 +654,7 @@ public class DataManager {
         });
     }
 
+
     /**
      * Validate settings data
      */
@@ -659,11 +663,21 @@ public class DataManager {
         if (!settings.containsKey("taxRate")) settings.put("taxRate", 0.08);
         if (!settings.containsKey("storeName")) settings.put("storeName", "GPOS-General");
         if (!settings.containsKey("storeAddress")) settings.put("storeAddress", "123 Main Street");
+        if (!settings.containsKey("uiScale")) settings.put("uiScale", 1.0);
 
         // Validate tax rate
         Object taxRate = settings.get("taxRate");
         if (!(taxRate instanceof Double) || (Double)taxRate < 0 || (Double)taxRate > 1) {
             settings.put("taxRate", 0.08);
+        }
+
+
+
+        // Validate UI scale
+        Object uiScale = settings.get("uiScale");
+
+        if (!(uiScale instanceof Double) || (Double)uiScale < 0.8 || (Double)uiScale > 2.0) {
+            settings.put("uiScale", 1.0);
         }
     }
 

@@ -77,8 +77,12 @@ public class MainPOS extends JFrame {
         add(mainPanel);
         add(statusBar(), BorderLayout.SOUTH);
         
+
         // Start time update timer
         startTimeUpdater();
+        
+        // Apply UI scaling on startup
+        applyUIScaling();
         
         // Show sales panel by default
         showPanel("Sales");
@@ -446,6 +450,7 @@ public class MainPOS extends JFrame {
     }
     
 
+
     // Getter methods
     public DataManager getDataManager() {
         return dataManager;
@@ -453,6 +458,133 @@ public class MainPOS extends JFrame {
     
     public Transaction getCurrentTransaction() {
         return currentTransaction;
+    }
+
+
+
+
+
+    // UI Scaling methods
+    public void applyUIScaling() {
+        double scaleFactor = (Double) dataManager.getSetting("uiScale");
+        scaleFactor = Math.max(0.8, Math.min(2.0, scaleFactor)); // Ensure scale is within valid range
+        
+        // Apply scaling based on base sizes
+        applyFontScaling(scaleFactor);
+        
+        // Refresh the layout
+        revalidate();
+        repaint();
+        
+        // Update status
+        int scalePercentage = (int) (scaleFactor * 100);
+        updateStatus("UI scaling applied: " + scalePercentage + "%");
+    }
+    
+    // Preview scaling method for real-time feedback
+    public void applyPreviewUIScaling(double scaleFactor) {
+        // Ensure scale is within valid range
+        scaleFactor = Math.max(0.8, Math.min(2.0, scaleFactor));
+        
+        // Apply scaling preview based on base sizes
+        applyFontScaling(scaleFactor);
+        
+        // Refresh the layout
+        revalidate();
+        repaint();
+        
+        // Update status with current percentage
+        int scalePercentage = (int) (scaleFactor * 100);
+        updateStatus("Preview scaling: " + scalePercentage + "%");
+    }
+    
+
+    private void applyFontScaling(double scaleFactor) {
+        // Scale fonts for main UI components
+        scaleFontsRecursively(this, scaleFactor);
+        scaleFontsRecursively(mainPanel, scaleFactor);
+        scaleFontsRecursively(menuBar, scaleFactor);
+        
+        // Scale tables specifically
+        scaleAllTables(scaleFactor);
+    }
+    
+
+
+    private void scaleFontsRecursively(Component component, double scaleFactor) {
+        if (component == null) return;
+        
+        // Scale fonts for swing components with proper base calculation
+        if (component instanceof JComponent) {
+            JComponent jComponent = (JComponent) component;
+            Font currentFont = jComponent.getFont();
+            if (currentFont != null) {
+                // Calculate scale relative to base font size (12pt) but respect current size
+                double baseSize = 12.0;
+                int targetSize = Math.max(8, (int) (baseSize * scaleFactor));
+                
+                // Only change font if size actually needs to change
+                if (currentFont.getSize() != targetSize) {
+                    jComponent.setFont(new Font(currentFont.getName(), currentFont.getStyle(), targetSize));
+                }
+            }
+        }
+        
+        // Recursively scale child components
+        if (component instanceof Container) {
+            Container container = (Container) component;
+            for (Component child : container.getComponents()) {
+                scaleFontsRecursively(child, scaleFactor);
+            }
+        }
+    }
+    
+    private void scaleAllTables(double scaleFactor) {
+        // Scale all JTables found in the UI
+        scaleTablesRecursively(this, scaleFactor);
+        scaleTablesRecursively(mainPanel, scaleFactor);
+    }
+    
+
+
+    private void scaleTablesRecursively(Component component, double scaleFactor) {
+        if (component == null) return;
+        
+        // Scale JTable specifically
+        if (component instanceof JTable) {
+            JTable table = (JTable) component;
+            
+            // Get current font and scale it properly based on base size
+            Font currentFont = table.getFont();
+            if (currentFont != null) {
+                int targetSize = Math.max(8, (int) (12.0 * scaleFactor)); // Base 12pt
+                if (currentFont.getSize() != targetSize) {
+                    table.setFont(new Font(currentFont.getName(), currentFont.getStyle(), targetSize));
+                }
+            }
+            
+            // Scale row height based on base size
+            int baseRowHeight = 18;
+            int targetRowHeight = Math.max(14, (int) (baseRowHeight * scaleFactor));
+            table.setRowHeight(targetRowHeight);
+            
+            // Scale header font
+            Font currentHeaderFont = table.getTableHeader().getFont();
+            if (currentHeaderFont != null) {
+                int targetHeaderSize = Math.max(8, (int) (12.0 * scaleFactor));
+                if (currentHeaderFont.getSize() != targetHeaderSize) {
+                    table.getTableHeader().setFont(new Font(currentHeaderFont.getName(), currentHeaderFont.getStyle(), targetHeaderSize));
+                }
+            }
+        }
+        
+        // Recursively scale child components
+        if (component instanceof Container) {
+            Container container = (Container) component;
+            for (Component child : container.getComponents()) {
+                scaleTablesRecursively(child, scaleFactor);
+            }
+        }
     }
     
     // Data management methods for production use
