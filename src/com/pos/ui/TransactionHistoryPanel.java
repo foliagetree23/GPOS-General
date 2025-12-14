@@ -375,10 +375,12 @@ public class TransactionHistoryPanel extends JPanel {
         JButton printButton = new JButton("Print Receipt");
         JButton closeButton = new JButton("Close");
 
+
         printButton.addActionListener(e -> {
             ReceiptPrinter.displayReceiptDialog(transaction,
                 (String) dataManager.getSetting("storeName"),
-                (String) dataManager.getSetting("storeAddress"));
+                (String) dataManager.getSetting("storeAddress"),
+                transaction.getAmountPaid());
         });
         closeButton.addActionListener(e -> detailsDialog.dispose());
 
@@ -413,9 +415,11 @@ public class TransactionHistoryPanel extends JPanel {
             return;
         }
 
+
         ReceiptPrinter.displayReceiptDialog(transaction,
             (String) dataManager.getSetting("storeName"),
-            (String) dataManager.getSetting("storeAddress"));
+            (String) dataManager.getSetting("storeAddress"),
+            transaction.getAmountPaid());
     }
 
     private void refreshTransactionTable() {

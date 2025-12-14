@@ -1,12 +1,10 @@
-package com.pos.ui;
 
+package com.pos.ui;
 
 import com.pos.manager.DataManager;
 import com.pos.model.Product;
 import com.pos.model.Transaction;
-
-
-
+import com.pos.ui.util.CurrencyAwareDocumentFilter;
 
 import javax.swing.*;
 import javax.swing.text.AttributeSet;
@@ -17,26 +15,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.text.NumberFormat;
 import java.util.Locale;
-
-
-/**
- * DocumentFilter for numeric input only
- */
-class NumericDocumentFilter extends DocumentFilter {
-    @Override
-    public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
-        if (string != null && string.matches("\\d*")) {
-            super.insertString(fb, offset, string, attr);
-        }
-    }
-
-    @Override
-    public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attr) throws BadLocationException {
-        if (text != null && text.matches("\\d*")) {
-            super.replace(fb, offset, length, text, attr);
-        }
-    }
-}
 
 /**
  * Payment Dialog - For processing payment and completing transactions
@@ -101,20 +79,23 @@ public class PaymentDialog extends JDialog {
 
         // Amount labels and fields
 
-        totalAmountLabel = new JLabel(String.format("$%.2f", transaction.getTotal() / 100.0));
+        totalAmountLabel = new JLabel(formatWithDots(transaction.getTotal()));
         totalAmountLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
         totalAmountLabel.setForeground(new Color(34, 139, 34));
 
 
 
-        // Use simple text field for integer input with numeric validation
-        paidAmountField = new JTextField(10);
+
+
+        // Use text field with currency-aware formatting
+        paidAmountField = new JTextField();
+        paidAmountField.setColumns(15); // Set visible columns but allow limitless input
         paidAmountField.setHorizontalAlignment(JTextField.RIGHT);
         
-        // Apply numeric document filter to prevent invalid characters
+        // Apply currency-aware document filter to enable autodecimal functionality
         javax.swing.text.Document document = paidAmountField.getDocument();
         if (document instanceof javax.swing.text.PlainDocument) {
-            ((javax.swing.text.PlainDocument) document).setDocumentFilter(new NumericDocumentFilter());
+            ((javax.swing.text.PlainDocument) document).setDocumentFilter(new CurrencyAwareDocumentFilter());
         }
 
         changeLabel = new JLabel("0");
@@ -221,9 +202,10 @@ public class PaymentDialog extends JDialog {
     
 
 
+
     private void calculateChange() {
         try {
-            String paidText = paidAmountField.getText().trim();
+            String paidText = paidAmountField.getText().trim().replace(".", "");
             if (paidText.isEmpty()) {
                 changeLabel.setText("0");
                 changeLabel.setForeground(Color.RED);
@@ -233,13 +215,13 @@ public class PaymentDialog extends JDialog {
             int paidAmount = Integer.parseInt(paidText);
 
             int change = paidAmount - transaction.getTotal();
-            changeLabel.setText(String.format("$%.2f", Math.max(0, change) / 100.0));
-
+            
             if (change < 0) {
                 changeLabel.setForeground(Color.RED);
                 changeLabel.setText("Insufficient");
             } else {
                 changeLabel.setForeground(Color.BLACK);
+                changeLabel.setText(formatWithDots(change));
             }
         } catch (Exception e) {
             changeLabel.setText("0");
@@ -260,9 +242,10 @@ public class PaymentDialog extends JDialog {
             }
         }
 
+
         // Validate payment amount
         try {
-            String paidText = paidAmountField.getText().trim();
+            String paidText = paidAmountField.getText().trim().replace(".", "");
             if (paidText.isEmpty()) {
                 JOptionPane.showMessageDialog(this,
                     "Please enter the payment amount.",
@@ -291,17 +274,18 @@ public class PaymentDialog extends JDialog {
                 paymentMethod = "Digital Wallet";
             }
 
+
             // Update transaction
             transaction.setPaymentMethod(paymentMethod);
             transaction.setCustomerName(customerNameField.getText().trim());
             transaction.setNotes(notesArea.getText().trim());
+            transaction.setAmountPaid(paidAmount);
 
             paymentCompleted = true;
 
 
             JOptionPane.showMessageDialog(this,
-                String.format("Payment completed successfully!\nChange: $%.2f",
-                    (paidAmount - transaction.getTotal()) / 100.0),
+                "Payment completed successfully!\nChange: " + formatWithDots(paidAmount - transaction.getTotal()),
                 "Payment Successful", JOptionPane.INFORMATION_MESSAGE);
 
             dispose();
@@ -321,13 +305,46 @@ public class PaymentDialog extends JDialog {
         return paymentCompleted;
     }
 
+    private String formatWithDots(int amount) {
+        String cleanText = String.valueOf(amount);
+        if (cleanText.isEmpty()) {
+            return "";
+        }
+
+        String formattedText;
+        if (cleanText.length() <= 2) {
+            formattedText = cleanText;
+        } else {
+            String cents = cleanText.substring(cleanText.length() - 2);
+            String whole = cleanText.substring(0, cleanText.length() - 2);
+            
+            StringBuilder formattedWhole = new StringBuilder();
+            int wholeLen = whole.length();
+            int firstGroupLen = wholeLen % 3;
+            if (firstGroupLen == 0 && wholeLen > 0) {
+                firstGroupLen = 3;
+            }
+
+            if (firstGroupLen > 0) {
+                formattedWhole.append(whole.substring(0, firstGroupLen));
+            }
+
+            for (int i = firstGroupLen; i < wholeLen; i += 3) {
+                formattedWhole.append('.').append(whole.substring(i, i + 3));
+            }
+            
+            formattedText = formattedWhole.toString() + "." + cents;
+        }
+        return formattedText;
+    }
+
 
 
 
 
     // New method to refresh display
     public void refreshData() {
-        totalAmountLabel.setText(String.format("$%.2f", transaction.getTotal() / 100.0));
+        totalAmountLabel.setText(formatWithDots(transaction.getTotal()));
         calculateChange(); // Recalculate change
     }
 }

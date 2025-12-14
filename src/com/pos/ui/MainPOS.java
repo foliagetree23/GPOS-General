@@ -327,11 +327,13 @@ public class MainPOS extends JFrame {
             dataManager.addTransaction(currentTransaction);
             dataManager.saveData();
             
+
             // Show receipt
             ReceiptPrinter.displayReceiptDialog(
                 currentTransaction,
                 (String) dataManager.getSetting("storeName"),
-                (String) dataManager.getSetting("storeAddress")
+                (String) dataManager.getSetting("storeAddress"),
+                currentTransaction.getAmountPaid()
             );
             
             // Refresh the sales panel to update stock

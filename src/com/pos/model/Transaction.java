@@ -20,9 +20,11 @@ public class Transaction implements Serializable {
     private int tax; // in cents
     private double taxRate;
     private int total; // in cents
+
     private String paymentMethod;
     private String customerName;
     private String notes;
+    private int amountPaid; // in cents
     private boolean completed;
     
     // Default constructor
@@ -188,12 +190,21 @@ public class Transaction implements Serializable {
         this.customerName = customerName;
     }
     
+
     public String getNotes() {
         return notes;
     }
     
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+    
+    public int getAmountPaid() {
+        return amountPaid;
+    }
+    
+    public void setAmountPaid(int amountPaid) {
+        this.amountPaid = amountPaid;
     }
     
     public boolean isCompleted() {

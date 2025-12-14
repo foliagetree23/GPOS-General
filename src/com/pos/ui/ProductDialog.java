@@ -1,8 +1,10 @@
 
+
 package com.pos.ui;
 
 import com.pos.manager.DataManager;
 import com.pos.model.Product;
+import com.pos.ui.util.CurrencyAwareDocumentFilter;
 
 import javax.swing.*;
 import java.awt.*;
@@ -74,7 +76,16 @@ class ProductDialog extends JDialog {
         descriptionArea.setWrapStyleWord(true);
         descriptionScroll = new JScrollPane(descriptionArea);
 
-        priceField = new JTextField(10);
+
+
+        priceField = new JTextField();
+        priceField.setColumns(15); // Set visible columns but allow limitless input
+        
+        // Apply currency-aware document filter to price field
+        javax.swing.text.Document priceDocument = priceField.getDocument();
+        if (priceDocument instanceof javax.swing.text.PlainDocument) {
+            ((javax.swing.text.PlainDocument) priceDocument).setDocumentFilter(new CurrencyAwareDocumentFilter());
+        }
 
 
 
@@ -250,7 +261,8 @@ class ProductDialog extends JDialog {
         nameField.setText(product.getName());
         descriptionArea.setText(product.getDescription());
 
-        priceField.setText(String.valueOf(product.getPrice() / 100.0));
+
+        priceField.setText(String.valueOf(product.getPrice()));
         categoryComboBox.setSelectedItem(product.getCategory());
         quantityField.setText(String.valueOf(product.getQuantity()));
         minStockField.setText(String.valueOf(product.getMinStockLevel()));
@@ -284,9 +296,10 @@ class ProductDialog extends JDialog {
 
 
 
-        String priceText = priceField.getText().trim();
-        if (!priceText.matches("\\d+")) {
-            JOptionPane.showMessageDialog(this, "Price must be a raw number (cents)",
+
+        String priceText = priceField.getText().trim().replace(".", "");
+        if (priceText.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Price is required.",
                                         "Validation Error", JOptionPane.ERROR_MESSAGE);
             priceField.requestFocus();
             return;
@@ -304,7 +317,8 @@ class ProductDialog extends JDialog {
             String name = nameField.getText().trim();
             String description = descriptionArea.getText().trim();
 
-            int price = Integer.parseInt(priceField.getText().trim());
+
+            int price = Integer.parseInt(priceText);
             String category = (String) categoryComboBox.getSelectedItem();
             int quantity = Integer.parseInt(quantityField.getText().trim());
             int minStock = minStockField.getText().trim().isEmpty() ? 5 :
@@ -375,12 +389,8 @@ class ProductDialog extends JDialog {
             dispose();
 
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Please enter valid numbers for ID, price and quantity.",
+            JOptionPane.showMessageDialog(this, "Please enter valid numbers for ID and quantity.",
                                         "Invalid Input", JOptionPane.ERROR_MESSAGE);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Please enter a valid price.",
-                                        "Invalid Price", JOptionPane.ERROR_MESSAGE);
-            priceField.requestFocus();
         }
     }
 

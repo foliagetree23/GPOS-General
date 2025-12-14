@@ -13,10 +13,18 @@ import java.util.List;
  */
 public class ReceiptPrinter {
     
+
     /**
      * Print a transaction receipt
      */
     public static void printReceipt(Transaction transaction) {
+        printReceipt(transaction, 0);
+    }
+    
+    /**
+     * Print a transaction receipt with amount paid
+     */
+    public static void printReceipt(Transaction transaction, int amountPaid) {
         if (transaction == null || transaction.isEmpty()) {
             JOptionPane.showMessageDialog(null, "No transaction to print", 
                                         "Print Error", JOptionPane.ERROR_MESSAGE);
@@ -25,7 +33,7 @@ public class ReceiptPrinter {
         
         // Create a print dialog
         PrinterJob printerJob = PrinterJob.getPrinterJob();
-        printerJob.setPrintable(new ReceiptPrintable(transaction));
+        printerJob.setPrintable(new ReceiptPrintable(transaction, amountPaid));
         
         if (printerJob.printDialog()) {
             try {
@@ -37,10 +45,18 @@ public class ReceiptPrinter {
         }
     }
     
+
     /**
      * Display receipt in a dialog window
      */
     public static void displayReceiptDialog(Transaction transaction, String storeName, String storeAddress) {
+        displayReceiptDialog(transaction, storeName, storeAddress, 0);
+    }
+    
+    /**
+     * Display receipt in a dialog window with amount paid
+     */
+    public static void displayReceiptDialog(Transaction transaction, String storeName, String storeAddress, int amountPaid) {
         if (transaction == null || transaction.isEmpty()) {
             JOptionPane.showMessageDialog(null, "No transaction to display", 
                                         "Display Error", JOptionPane.ERROR_MESSAGE);
@@ -54,7 +70,7 @@ public class ReceiptPrinter {
         JTextArea receiptArea = new JTextArea();
         receiptArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         receiptArea.setEditable(false);
-        receiptArea.setText(formatReceiptText(transaction, storeName, storeAddress));
+        receiptArea.setText(formatReceiptText(transaction, storeName, storeAddress, amountPaid));
         
         JScrollPane scrollPane = new JScrollPane(receiptArea);
         
@@ -62,7 +78,7 @@ public class ReceiptPrinter {
         JButton printButton = new JButton("Print");
         JButton closeButton = new JButton("Close");
         
-        printButton.addActionListener(e -> printReceipt(transaction));
+        printButton.addActionListener(e -> printReceipt(transaction, amountPaid));
         closeButton.addActionListener(e -> frame.dispose());
         
         buttonPanel.add(printButton);
@@ -75,10 +91,18 @@ public class ReceiptPrinter {
     }
     
 
+
     /**
      * Format receipt as text for display or printing
      */
     public static String formatReceiptText(Transaction transaction, String storeName, String storeAddress) {
+        return formatReceiptText(transaction, storeName, storeAddress, 0);
+    }
+
+    /**
+     * Format receipt as text for display or printing with amount paid
+     */
+    public static String formatReceiptText(Transaction transaction, String storeName, String storeAddress, int amountPaid) {
         StringBuilder receipt = new StringBuilder();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         
@@ -91,8 +115,18 @@ public class ReceiptPrinter {
         // Transaction info
         receipt.append(String.format("Transaction: #%d\n", transaction.getTransactionId()));
         receipt.append(String.format("Date: %s\n", dateFormat.format(java.sql.Timestamp.valueOf(transaction.getTimestamp()))));
-        if (transaction.getCustomerName() != null && !transaction.getCustomerName().isEmpty()) {
-            receipt.append(String.format("Customer: %s\n", transaction.getCustomerName()));
+        
+        // Customer name - always display, use "-" if empty
+        String customerName = transaction.getCustomerName();
+        if (customerName == null || customerName.trim().isEmpty()) {
+            customerName = "-";
+        }
+        receipt.append(String.format("Customer: %s\n", customerName));
+        
+        // Notes - only display if not empty
+        String notes = transaction.getNotes();
+        if (notes != null && !notes.trim().isEmpty()) {
+            receipt.append(String.format("Notes: %s\n", notes));
         }
         receipt.append("\n");
         
@@ -120,11 +154,23 @@ public class ReceiptPrinter {
         receipt.append(String.format("%-24s $%8.2f\n", "Tax:", transaction.getTax() / 100.0));
         receipt.append("-----------------------------------------\n");
         receipt.append(String.format("%-24s $%8.2f\n", "TOTAL:", transaction.getTotal() / 100.0));
+
         receipt.append("===========================================\n\n");
         
         // Payment info
         receipt.append(String.format("Payment Method: %s\n", transaction.getPaymentMethod() != null ? 
                                   transaction.getPaymentMethod() : "Cash"));
+        
+        // Amount paid and change calculation
+        if (amountPaid > 0) {
+            int change = amountPaid - transaction.getTotal();
+            receipt.append(String.format("Amount Paid: $%8.2f\n", amountPaid / 100.0));
+            if (change >= 0) {
+                receipt.append(String.format("Change:       $%8.2f\n", change / 100.0));
+            } else {
+                receipt.append(String.format("Change:       -$%7.2f\n", Math.abs(change) / 100.0));
+            }
+        }
         receipt.append("\n");
         
         // Footer
@@ -169,17 +215,23 @@ public class ReceiptPrinter {
     }
 }
 
+
 /**
  * Printable interface implementation for receipts
  */
 class ReceiptPrintable implements Printable {
     private final Transaction transaction;
-
+    private final int amountPaid;
     private final String storeName = "GPOS-General";
     private final String storeAddress = "123 Main Street";
     
     public ReceiptPrintable(Transaction transaction) {
+        this(transaction, 0);
+    }
+    
+    public ReceiptPrintable(Transaction transaction, int amountPaid) {
         this.transaction = transaction;
+        this.amountPaid = amountPaid;
     }
     
     @Override
@@ -200,8 +252,9 @@ class ReceiptPrintable implements Printable {
         g2d.translate((int) x, (int) y);
         
 
+
         // Print receipt content
-        String receiptText = ReceiptPrinter.formatReceiptText(transaction, storeName, storeAddress);
+        String receiptText = ReceiptPrinter.formatReceiptText(transaction, storeName, storeAddress, amountPaid);
         String[] lines = receiptText.split("\n");
         
         int lineHeight = 12;
