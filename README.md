@@ -563,7 +563,7 @@ A comprehensive point of sale system for managing products, sales, and transacti
 
 ## 📜 License
 
-This project is licensed under the ISC License - see the LICENSE file for details.
+This project is licensed under the GNU GPL Version 1 License - see the LICENSE file for details.
 
 ## 🤝 Contributing
 
